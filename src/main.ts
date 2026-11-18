@@ -1,3 +1,6 @@
-// Entry point. Feature wiring is added module by module; see PLAN.md.
-const app = document.getElementById('app');
-if (app) app.textContent = 'Kestrel';
+import './styles/main.css';
+import { mountApp } from './app';
+
+const root = document.getElementById('app');
+if (!root) throw new Error('Missing #app element');
+mountApp(root);
