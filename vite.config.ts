@@ -12,7 +12,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: false,
-    // Monaco's core chunk is large by nature; everything else stays small.
-    chunkSizeWarningLimit: 3000,
+    // Monaco's core chunk is about 3.1 MB and loads lazily; everything else is small.
+    chunkSizeWarningLimit: 3300,
   },
 });
