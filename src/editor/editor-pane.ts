@@ -30,6 +30,8 @@ function isUnder(path: string, base: string): boolean {
 export class EditorPane {
   /** Fires with the active file path, or null when no file is open. */
   readonly onActiveFileChange = new Emitter<string | null>();
+  /** Fires with the file path after each successful save. */
+  readonly onDidSave = new Emitter<string>();
   /** Fires whenever any document becomes dirty or clean. */
   readonly onDirtyChange = new Emitter<void>();
 
@@ -52,10 +54,15 @@ export class EditorPane {
     registerCommand('tab.close', () => (this.active ? this.close(this.active) : undefined));
     registerCommand('tab.next', () => this.cycle(1));
     registerCommand('tab.previous', () => this.cycle(-1));
+    registerCommand('view.focusEditor', () => this.focus());
   }
 
   get activePath(): string | null {
     return this.active?.path ?? null;
+  }
+
+  focus(): void {
+    this.editor?.focus();
   }
 
   hasUnsavedChanges(): boolean {
@@ -130,6 +137,7 @@ export class EditorPane {
     this.renderTabBar();
     this.onDirtyChange.fire();
     notify(`Saved ${baseName(doc.path)}`);
+    this.onDidSave.fire(doc.path);
   }
 
   private async close(doc: OpenDoc, force = false): Promise<void> {

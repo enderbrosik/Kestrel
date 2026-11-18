@@ -5,6 +5,8 @@ import { h } from './core/dom';
 import { runCommand } from './core/commands';
 import { Explorer } from './workspace/explorer';
 import { EditorPane } from './editor/editor-pane';
+import { getConfigStore } from './config/store';
+import { initKeybindings } from './keybindings';
 import { bindStatusBar } from './ui/status';
 
 export function mountApp(root: HTMLElement): void {
@@ -55,17 +57,22 @@ export function mountApp(root: HTMLElement): void {
   explorer.onFileOpen.on((path) => void editor.openFile(path));
   explorer.onFileOperation.on((op) => editor.handleFileOperation(op));
 
-  // Temporary hard-coded save shortcut. Step 4 replaces this with the
-  // user-editable keybindings file.
-  document.addEventListener('keydown', (e) => {
-    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      void runCommand('file.save');
-    }
-  });
+  void startKeybindings(editor);
 
   // Warn before leaving the page with unsaved edits (web build).
   window.addEventListener('beforeunload', (e) => {
     if (editor.hasUnsavedChanges()) e.preventDefault();
+  });
+}
+
+async function startKeybindings(editor: EditorPane): Promise<void> {
+  const keybindings = await initKeybindings({
+    store: await getConfigStore(),
+    openFile: (path) => editor.openFile(path),
+  });
+  // Saving keybindings.json applies it right away.
+  const file = await keybindings.filePath();
+  editor.onDidSave.on((path) => {
+    if (path === file) void keybindings.reload();
   });
 }

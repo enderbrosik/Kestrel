@@ -46,6 +46,13 @@ export class Explorer {
     registerCommand('explorer.delete', () => this.deleteSelected());
     registerCommand('explorer.refresh', () => this.refresh());
     registerCommand('workspace.openFolder', () => this.openFolder());
+    registerCommand('explorer.selectNext', () => this.moveSelection(1));
+    registerCommand('explorer.selectPrevious', () => this.moveSelection(-1));
+    registerCommand('explorer.expand', () => this.expandSelected());
+    registerCommand('explorer.collapse', () => this.collapseSelected());
+    registerCommand('explorer.open', () => this.openSelected());
+    registerCommand('view.focusExplorer', () => this.focus());
+    this.container.tabIndex = 0; // so the tree can take keyboard focus
     this.render();
   }
 
@@ -121,6 +128,63 @@ export class Explorer {
     } catch (err) {
       reportError(`Could not delete ${node.name}`, err);
     }
+  }
+
+  // ---- keyboard navigation ------------------------------------------------
+
+  focus(): void {
+    this.container.focus();
+    if (this.root && !this.selectedNode()) {
+      this.selected = this.visibleNodes()[0]?.path ?? null;
+      this.render();
+    }
+  }
+
+  private visibleNodes(): TreeNode[] {
+    const out: TreeNode[] = [];
+    const walk = (node: TreeNode) => {
+      for (const child of node.children ?? []) {
+        out.push(child);
+        if (child.isDir && child.expanded) walk(child);
+      }
+    };
+    if (this.root) walk(this.root);
+    return out;
+  }
+
+  private moveSelection(step: 1 | -1): void {
+    const nodes = this.visibleNodes();
+    if (nodes.length === 0) return;
+    const index = nodes.findIndex((n) => n.path === this.selected);
+    const next = index < 0 ? (step === 1 ? 0 : nodes.length - 1) : Math.min(nodes.length - 1, Math.max(0, index + step));
+    this.selected = nodes[next]!.path;
+    this.render();
+  }
+
+  private async expandSelected(): Promise<void> {
+    const node = this.selectedNode();
+    if (!node?.isDir) return;
+    if (!node.expanded) await this.toggle(node);
+    else if (node.children?.[0]) {
+      this.selected = node.children[0].path;
+      this.render();
+    }
+  }
+
+  private async collapseSelected(): Promise<void> {
+    const node = this.selectedNode();
+    if (!node) return;
+    if (node.isDir && node.expanded) return this.toggle(node);
+    const parent = this.findParent(node.path);
+    if (parent && parent !== this.root) {
+      this.selected = parent.path;
+      this.render();
+    }
+  }
+
+  private async openSelected(): Promise<void> {
+    const node = this.selectedNode();
+    if (node) await this.activate(node);
   }
 
   // ---- edit flow ----------------------------------------------------------
@@ -283,6 +347,7 @@ export class Explorer {
     addRows(this.root, 0);
     this.container.replaceChildren(list);
     this.focusEditor();
+    this.container.querySelector('.row.selected')?.scrollIntoView({ block: 'nearest' });
   }
 
   private renderRow(node: TreeNode, depth: number, parent: TreeNode): HTMLElement {

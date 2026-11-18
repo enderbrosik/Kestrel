@@ -1,6 +1,7 @@
 // Kestrel desktop shell. Native commands live in their own modules and are
 // registered below. Each feature adds its commands as it lands.
 
+mod config;
 mod fs;
 
 pub fn run() {
@@ -15,6 +16,10 @@ pub fn run() {
             fs::fs_rename,
             fs::fs_move,
             fs::fs_remove,
+            config::config_path,
+            config::config_read,
+            config::config_write,
+            config::config_list,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Kestrel");

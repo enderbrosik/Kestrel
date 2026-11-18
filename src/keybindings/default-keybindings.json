@@ -1,0 +1,22 @@
+[
+  { "keys": "Mod+S", "run": "file.save" },
+  { "keys": "Mod+Shift+O", "run": "workspace.openFolder" },
+  { "keys": "Mod+Alt+W", "run": "tab.close" },
+  { "keys": "Mod+Alt+Right", "run": "tab.next" },
+  { "keys": "Mod+Alt+Left", "run": "tab.previous" },
+  { "keys": "Mod+1", "run": "view.focusExplorer" },
+  { "keys": "Mod+2", "run": "view.focusEditor" },
+  { "keys": "Mod+Alt+N", "run": "explorer.newFile" },
+  { "keys": "Mod+Alt+Shift+N", "run": "explorer.newFolder" },
+  { "keys": "Mod+Alt+R", "run": "explorer.refresh" },
+  { "keys": "Mod+Alt+K", "run": "keybindings.openFile" },
+
+  { "keys": "Down", "run": "explorer.selectNext", "when": "explorer" },
+  { "keys": "Up", "run": "explorer.selectPrevious", "when": "explorer" },
+  { "keys": "Right", "run": "explorer.expand", "when": "explorer" },
+  { "keys": "Left", "run": "explorer.collapse", "when": "explorer" },
+  { "keys": "Enter", "run": "explorer.open", "when": "explorer" },
+  { "keys": "F2", "run": "explorer.rename", "when": "explorer" },
+  { "keys": "Delete", "run": "explorer.delete", "when": "explorer" },
+  { "keys": "Mod+Backspace", "run": "explorer.delete", "when": "explorer" }
+]

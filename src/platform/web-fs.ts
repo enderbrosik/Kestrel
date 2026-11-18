@@ -3,6 +3,7 @@
 // kept in memory for the session; they are not restored after a reload.
 
 import type { FileEntry, FileSystemBackend } from './fs';
+import { isWebConfigPath, readWebConfig, webConfigName, writeWebConfig } from './web-config';
 
 type AnyDirHandle = FileSystemDirectoryHandle;
 type AnyFileHandle = FileSystemFileHandle;
@@ -118,6 +119,7 @@ export const webFileSystem: FileSystemBackend = {
   },
 
   async readFile(path) {
+    if (isWebConfigPath(path)) return readWebConfig(webConfigName(path)) ?? '';
     const { rest } = splitPath(path);
     if (rest.length === 0) throw new Error('Not a file');
     const parent = await dirAt(parentPath(path));
@@ -131,6 +133,7 @@ export const webFileSystem: FileSystemBackend = {
   },
 
   async writeFile(path, content) {
+    if (isWebConfigPath(path)) return writeWebConfig(webConfigName(path), content);
     const { rest } = splitPath(path);
     const parent = await dirAt(parentPath(path));
     const file = await parent.getFileHandle(rest[rest.length - 1]!, { create: true });
