@@ -95,9 +95,9 @@ Done here (Linux container):
 
 ```bash
 xcode-select --install   # Command Line Tools only
-rustup target list --installed   # should include aarch64-apple-darwin (the default on Apple Silicon)
+rustup target add aarch64-apple-darwin x86_64-apple-darwin   # both are needed for a universal build
 npm install
-npm run tauri build
+npm run tauri:build:mac   # universal; plain `npm run tauri build` builds for your own chip only
 ```
 
 Things worth checking on first run on macOS: the folder picker and Save As dialogs, drag-and-drop move in the explorer (the Tauri window's file-drop handling can interfere with in-page drags; if so, set `dragDropEnabled: false` on the window), and that no default menu accelerator swallows a default keybinding.
@@ -120,13 +120,13 @@ Answers to the first round of questions:
 2. **Repository: local only for now.** No remote, nothing pushed.
 3. **Plugin compatibility: not decided yet.** The plugin system is deferred; the stubs in `src/future/plugins.ts` stay as they are.
 4. **Web build: a demo.** It does not need parity with desktop. Do not add web fallbacks for terminal, git, or debugger. Keep it working for trying Kestrel in a browser, and stop there.
-5. **Apple Developer ID: yes.** Signing and notarization can be set up. When that work starts it needs the Team ID, a "Developer ID Application" certificate (kept in the keychain or CI secrets, never in the repo), and an app-specific password or API key for notarization. Add it to Phase 3 as "macOS signing, notarization, and auto-update".
+5. **Apple Developer ID: yes.** The macOS build is a universal binary (decided). Signing and notarization can be set up. When that work starts it needs the Team ID, a "Developer ID Application" certificate (kept in the keychain or CI secrets, never in the repo), and an app-specific password or API key for notarization. Add it to Phase 3 as "macOS signing, notarization, and auto-update".
 
 ## Open questions for Aaron
 
 1. **Should Monaco's editing shortcuts be remappable now, and should the defaults differ from VS Code's?** Your brief says not to copy VS Code's bindings; today only the app-level ones are custom.
 2. **Startup behavior.** Reopen the last folder automatically? Restore open tabs? Auto-save on focus loss? I chose none of these.
-3. **macOS builds.** You have an Apple Developer ID, so signing is possible. Apple Silicon only, or a universal binary that also runs on Intel Macs? I set the minimum macOS to 11.
+3. **macOS builds.** You have an Apple Developer ID, so signing is possible. Decided: universal binary (Apple Silicon and Intel). I set the minimum macOS to 11; say if Intel Macs on older systems matter.
 4. **Telemetry and updates.** Proposal: no telemetry at all, and an opt-in update check later. Agree?
 5. **Settings model.** Per-folder `.kestrel/settings.json` and per-language overrides are the usual next step. Do you want them in Phase 2?
 6. **Multi-window and multi-root workspaces.** One folder per window, or several?

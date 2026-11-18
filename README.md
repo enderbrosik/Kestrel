@@ -16,10 +16,24 @@ Status: early development (Phase 1). See [PLAN.md](PLAN.md).
 npm install
 npm run dev        # web app in the browser at http://localhost:1420
 npm run tauri dev  # desktop app with hot reload
-npm run tauri build
+npm run tauri build   # for the machine you are on
+npm run tauri:build:mac   # macOS universal app (Apple Silicon + Intel), see below
 npm test           # unit tests
 npm run build      # typecheck and production web bundle in dist/
 ```
+
+## macOS universal build
+
+One `.app` / `.dmg` that runs natively on both Apple Silicon and Intel Macs:
+
+```bash
+xcode-select --install   # Command Line Tools only
+rustup target add aarch64-apple-darwin x86_64-apple-darwin
+npm install
+npm run tauri:build:mac
+```
+
+The bundle is written to `src-tauri/target/universal-apple-darwin/release/bundle/`. Plain `npm run tauri build` makes an app for your own chip only.
 
 ## What is in Phase 1
 
