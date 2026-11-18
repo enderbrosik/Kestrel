@@ -32,11 +32,15 @@ import 'monaco-editor/features/wordHighlighter/register.js';
 import 'monaco-editor/features/wordOperations/register.js';
 import 'monaco-editor/features/wordPartOperations/register.js';
 
+import { applyLanguage, registerJson } from '../languages';
+
+registerJson(monaco.languages);
+
 self.MonacoEnvironment = {
   getWorker: () => new EditorWorker(),
 };
 
-export { monaco };
+export { monaco, applyLanguage };
 export type MonacoApi = typeof monaco;
 export type TextModel = monaco.editor.ITextModel;
 export type CodeEditor = monaco.editor.IStandaloneCodeEditor;

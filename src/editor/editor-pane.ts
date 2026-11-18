@@ -21,6 +21,8 @@ interface OpenDoc {
   viewState: ViewState | null;
 }
 
+type ApplyLanguage = (typeof import('../languages'))['applyLanguage'];
+
 function isUnder(path: string, base: string): boolean {
   return path === base || path.startsWith(`${base}/`) || path.startsWith(`${base}\\`);
 }
@@ -35,6 +37,7 @@ export class EditorPane {
   private active: OpenDoc | null = null;
   private nextId = 1;
   private monaco: MonacoApi | null = null;
+  private applyLanguage: ApplyLanguage | null = null;
   private editor: CodeEditor | null = null;
   private loading: Promise<void> | null = null;
 
@@ -81,6 +84,7 @@ export class EditorPane {
     // Model URIs are unique ids, so renaming a file never collides with a stale model.
     const uri = monaco.Uri.from({ scheme: 'kestrel', path: `/${id}/${baseName(path)}` });
     const model = monaco.editor.createModel(text, undefined, uri);
+    this.applyLanguage!(monaco, model, path);
     const doc: OpenDoc = { id, path, model, savedVersion: model.getAlternativeVersionId(), viewState: null };
     model.onDidChangeContent(() => {
       this.renderTabBar();
@@ -157,7 +161,10 @@ export class EditorPane {
   handleFileOperation(op: FileOperation): void {
     if (op.type === 'rename' || op.type === 'move') {
       for (const doc of this.docs) {
-        if (isUnder(doc.path, op.from)) doc.path = op.to + doc.path.slice(op.from.length);
+        if (!isUnder(doc.path, op.from)) continue;
+        doc.path = op.to + doc.path.slice(op.from.length);
+        // The extension may have changed, so re-detect the language.
+        if (this.monaco) this.applyLanguage?.(this.monaco, doc.model, doc.path);
       }
       this.renderTabBar();
       if (this.active) this.onActiveFileChange.fire(this.active.path);
@@ -174,8 +181,9 @@ export class EditorPane {
   }
 
   private ensureEditor(): Promise<void> {
-    this.loading ??= import('./monaco').then(({ monaco }) => {
+    this.loading ??= import('./monaco').then(({ monaco, applyLanguage }) => {
       this.monaco = monaco;
+      this.applyLanguage = applyLanguage;
       this.editor = monaco.editor.create(this.host, {
         model: null,
         automaticLayout: true,
