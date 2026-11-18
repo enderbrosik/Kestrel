@@ -7,8 +7,10 @@ import { Explorer } from './workspace/explorer';
 import { EditorPane } from './editor/editor-pane';
 import { getConfigStore } from './config/store';
 import { initKeybindings } from './keybindings';
+import { initSettings, type Settings } from './settings';
 import { initThemes, type ThemeManager } from './themes';
-import { bindStatusBar } from './ui/status';
+import type { ThemeMode } from './themes/loader';
+import { bindStatusBar, reportError } from './ui/status';
 
 export function mountApp(root: HTMLElement, themes: ThemeManager): void {
   const sidebarTitle = h('span', { class: 'sidebar-title' }, 'Explorer');
@@ -23,7 +25,12 @@ export function mountApp(root: HTMLElement, themes: ThemeManager): void {
       'header',
       { class: 'titlebar' },
       h('span', { class: 'brand' }, 'Kestrel'),
-      h('button', { onclick: () => runCommand('workspace.openFolder') }, 'Open Folder'),
+      h(
+        'div',
+        { class: 'titlebar-actions' },
+        h('button', { onclick: () => runCommand('workspace.openFolder') }, 'Open Folder'),
+        h('button', { title: 'Settings', 'aria-label': 'Settings', onclick: () => runCommand('settings.open') }, 'Settings'),
+      ),
     ),
     h(
       'div',
@@ -69,7 +76,7 @@ export function mountApp(root: HTMLElement, themes: ThemeManager): void {
   themes.onDidChange.on(showTheme);
   showTheme();
 
-  void startConfig(editor, themes);
+  void startConfig(editor, themes, root);
 
   // Warn before leaving the page with unsaved edits (web build).
   window.addEventListener('beforeunload', (e) => {
@@ -78,14 +85,37 @@ export function mountApp(root: HTMLElement, themes: ThemeManager): void {
 }
 
 /** Loads user configuration (keybindings, themes) and reloads each when its file is saved. */
-async function startConfig(editor: EditorPane, themes: ThemeManager): Promise<void> {
+async function startConfig(editor: EditorPane, themes: ThemeManager, root: HTMLElement): Promise<void> {
   const store = await getConfigStore();
   const openFile = (path: string) => editor.openFile(path);
+
+  const settings = await initSettings({
+    store,
+    mount: root,
+    openFile,
+    themeOptions: (kind) => themes.list(kind === 'light-themes' ? 'light' : 'dark').map((t) => ({ id: t.id, name: t.name })),
+  });
+  const applySettings = (s: Settings) => {
+    themes.setChoice({ mode: s['theme.mode'] as ThemeMode, light: s['theme.light'] as string, dark: s['theme.dark'] as string });
+    editor.applySettings(s);
+  };
+  settings.service.onDidChange.on(applySettings);
+  applySettings(settings.service.values);
+  themes.onDidChange.on(() => settings.refreshScreen());
+
   const keybindings = await initKeybindings({ store, openFile });
-  const themeFiles = await initThemes({ manager: themes, store, openFile });
+  const themeFiles = await initThemes({
+    manager: themes,
+    store,
+    openFile,
+    setMode: (mode) => void settings.service.set('theme.mode', mode).catch((err) => reportError('Cannot change the color mode', err)),
+  });
+
   const keybindingsFile = await keybindings.filePath();
+  const settingsFile = await settings.filePath();
   editor.onDidSave.on((path) => {
-    if (path === keybindingsFile) void keybindings.reload();
+    if (path === settingsFile) void settings.reload();
+    else if (path === keybindingsFile) void keybindings.reload();
     else if (themeFiles.isThemeFile(path)) void themeFiles.reload();
   });
 }

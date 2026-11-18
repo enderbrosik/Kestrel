@@ -6,7 +6,7 @@ import type { ConfigStore } from '../config/store';
 import { reportError } from '../ui/status';
 import darkJson from './builtin/dark.json';
 import lightJson from './builtin/light.json';
-import { nextMode, parseTheme, themeTemplate, type Theme, type ThemeType } from './loader';
+import { nextMode, parseTheme, themeTemplate, type Theme, type ThemeMode, type ThemeType } from './loader';
 import { ThemeManager } from './manager';
 
 export { ThemeManager } from './manager';
@@ -65,12 +65,14 @@ export async function initThemes(deps: {
   manager: ThemeManager;
   store: ConfigStore;
   openFile(path: string): Promise<void>;
+  /** Persist the color mode (the app saves it to settings.json, which then updates the manager). */
+  setMode(mode: ThemeMode): void;
 }): Promise<ThemesHandle> {
   const { manager, store } = deps;
 
-  registerCommand('theme.cycleMode', () => manager.setChoice({ mode: nextMode(manager.state.mode) }));
+  registerCommand('theme.cycleMode', () => deps.setMode(nextMode(manager.state.mode)));
   registerCommand('theme.setMode', (mode) => {
-    if (mode === 'auto' || mode === 'light' || mode === 'dark') manager.setChoice({ mode });
+    if (mode === 'auto' || mode === 'light' || mode === 'dark') deps.setMode(mode);
   });
   registerCommand('theme.newFromCurrent', async () => {
     const files = new Set(await store.list(THEMES_DIR));

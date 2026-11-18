@@ -11,7 +11,7 @@ Colors for the whole app, defined in JSON. One light and one dark theme are buil
 
 `mode` is `auto` (follow the OS), `light`, or `dark`. The status bar button, or `theme.cycleMode` (Mod+Alt+T), cycles through them. Commands: `theme.cycleMode`, `theme.setMode`, `theme.newFromCurrent`.
 
-The mode is held in memory in this step. The settings step stores it in `settings.json` (`theme.mode`, `theme.light`, `theme.dark`).
+The choice is stored in `settings.json` as `theme.mode`, `theme.light`, and `theme.dark` (the last two pick which theme is used for each mode, including your own).
 
 ## Writing a theme
 

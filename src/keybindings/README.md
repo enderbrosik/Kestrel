@@ -36,6 +36,7 @@ Keyboard shortcuts, defined in JSON and editable by the user. Kestrel's default 
 | Mod+1 / Mod+2 | `view.focusExplorer` / `view.focusEditor` |
 | Mod+Alt+N / Mod+Alt+Shift+N | `explorer.newFile` / `explorer.newFolder` |
 | Mod+Alt+R | `explorer.refresh` |
+| Mod+, / Mod+Alt+, | `settings.open` (screen) / `settings.openFile` (JSON) |
 | Mod+Alt+K | `keybindings.openFile` |
 | Mod+Alt+T | `theme.cycleMode` (auto, light, dark) |
 | Up, Down, Left, Right, Enter (explorer focused) | `explorer.selectPrevious`, `selectNext`, `collapse`, `expand`, `open` |

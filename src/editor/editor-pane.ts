@@ -10,8 +10,11 @@ import { confirmDialog } from '../ui/dialog';
 import { notify, reportError } from '../ui/status';
 import type { FileOperation } from '../workspace/explorer';
 import type { CodeEditor, MonacoApi, TextModel, ViewState } from './monaco';
+import { defaultSettings } from '../settings/loader';
+import type { Settings } from '../settings/schema';
 import type { Theme } from '../themes/loader';
 import { toMonacoTheme } from '../themes/loader';
+import { editorOptionsFromSettings, indentFromSettings } from './options';
 import { renderTabs } from './tabs';
 
 interface OpenDoc {
@@ -45,6 +48,7 @@ export class EditorPane {
   private editor: CodeEditor | null = null;
   private loading: Promise<void> | null = null;
   private theme: Theme | null = null;
+  private settings: Settings = defaultSettings();
 
   private readonly tabBar = h('div', { class: 'tabs', role: 'tablist' });
   private readonly host = h('div', { class: 'editor-host' });
@@ -66,6 +70,19 @@ export class EditorPane {
 
   focus(): void {
     this.editor?.focus();
+  }
+
+  /** Apply editor settings (font, wrapping, indentation, ...) to the editor and every open file. */
+  applySettings(settings: Settings): void {
+    this.settings = settings;
+    this.editor?.updateOptions(editorOptionsFromSettings(settings));
+    for (const doc of this.docs) this.applyIndent(doc);
+  }
+
+  private applyIndent(doc: OpenDoc): void {
+    const { tabSize, insertSpaces, detect } = indentFromSettings(this.settings, doc.model.getLanguageId());
+    doc.model.updateOptions({ tabSize, insertSpaces });
+    if (detect) doc.model.detectIndentation(insertSpaces, tabSize);
   }
 
   /** Set the editor colors. Applied right away if Monaco is loaded, otherwise when it loads. */
@@ -112,6 +129,7 @@ export class EditorPane {
       this.renderTabBar();
       this.onDirtyChange.fire();
     });
+    this.applyIndent(doc);
     this.docs.push(doc);
     this.activate(doc);
   }
@@ -188,6 +206,7 @@ export class EditorPane {
         doc.path = op.to + doc.path.slice(op.from.length);
         // The extension may have changed, so re-detect the language.
         if (this.monaco) this.applyLanguage?.(this.monaco, doc.model, doc.path);
+        this.applyIndent(doc);
       }
       this.renderTabBar();
       if (this.active) this.onActiveFileChange.fire(this.active.path);
@@ -210,9 +229,8 @@ export class EditorPane {
       this.editor = monaco.editor.create(this.host, {
         model: null,
         automaticLayout: true,
-        fontSize: 14,
-        minimap: { enabled: false },
         scrollBeyondLastLine: false,
+        ...editorOptionsFromSettings(this.settings),
       });
       this.applyMonacoTheme();
     });

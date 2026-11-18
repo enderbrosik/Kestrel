@@ -9,6 +9,8 @@
   { "keys": "Mod+Alt+N", "run": "explorer.newFile" },
   { "keys": "Mod+Alt+Shift+N", "run": "explorer.newFolder" },
   { "keys": "Mod+Alt+R", "run": "explorer.refresh" },
+  { "keys": "Mod+,", "run": "settings.open" },
+  { "keys": "Mod+Alt+,", "run": "settings.openFile" },
   { "keys": "Mod+Alt+K", "run": "keybindings.openFile" },
   { "keys": "Mod+Alt+T", "run": "theme.cycleMode" },
 

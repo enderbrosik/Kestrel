@@ -17,7 +17,7 @@ import 'monaco-editor/languages/definitions/csharp/register.js';
 
 import type { editor, languages as MonacoLanguages } from 'monaco-editor/editor/editor.api.js';
 import { jsonConfiguration, jsonLanguage, jsonTokens } from './json';
-import { indentDefaults, languageIdForPath } from './detect';
+import { languageIdForPath } from './detect';
 
 type LanguagesApi = typeof MonacoLanguages;
 
@@ -27,7 +27,7 @@ export function registerJson(languages: LanguagesApi): void {
   languages.setMonarchTokensProvider('json', jsonTokens);
 }
 
-/** Set a model's language from its file path and apply that language's indentation defaults. */
+/** Set a model's language from its file path. Returns the language id. */
 export function applyLanguage(
   monaco: { editor: typeof editor; languages: LanguagesApi },
   model: editor.ITextModel,
@@ -35,6 +35,5 @@ export function applyLanguage(
 ): string {
   const id = languageIdForPath(monaco.languages.getLanguages(), path);
   if (model.getLanguageId() !== id) monaco.editor.setModelLanguage(model, id);
-  model.updateOptions(indentDefaults(id));
   return id;
 }
