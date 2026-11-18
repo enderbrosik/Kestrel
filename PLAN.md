@@ -2,7 +2,7 @@
 
 Kestrel is an open-source code editor meant to replace VS Code for everyday work. It is built on Monaco (the editor component from VS Code) in TypeScript with Vite, and ships as a Tauri 2 desktop app and as a web app from the same code.
 
-"Kestrel" is a placeholder name. The bundle identifier `app.pocketlantern.kesterel` was set by Aaron.
+"Kestrel" is a placeholder name. The bundle identifier `app.pocketlantern.kestrel` was set by Aaron (`app.pocketlantern.kestrel`).
 
 ## Phases
 
@@ -116,7 +116,7 @@ Things worth checking on first run on macOS: the folder picker and Save As dialo
 
 Answers to the first round of questions:
 
-1. **License: undecided, "maybe closed source".** This conflicts with the original brief ("open source from day one"), and the repository currently contains an MIT `LICENSE`. Nothing has been published, so it can be changed freely. Until Aaron decides, treat the license as unsettled. Two facts matter: code published under MIT stays MIT for everyone who received it, and a repository with no license file is all rights reserved by default. Name, bundle identifier (`app.pocketlantern.kesterel`), and contribution rules (DCO or CLA) are still open, and a CLA matters more if the project might go closed or dual-licensed.
+1. **License: undecided, "maybe closed source".** This conflicts with the original brief ("open source from day one"), and the repository currently contains an MIT `LICENSE`. Nothing has been published, so it can be changed freely. Until Aaron decides, treat the license as unsettled. Two facts matter: code published under MIT stays MIT for everyone who received it, and a repository with no license file is all rights reserved by default. Name, bundle identifier (`app.pocketlantern.kestrel`), and contribution rules (DCO or CLA) are still open, and a CLA matters more if the project might go closed or dual-licensed.
 2. **Repository: local only for now.** No remote, nothing pushed.
 3. **Plugin compatibility: not decided yet.** The plugin system is deferred; the stubs in `src/future/plugins.ts` stay as they are.
 4. **Web build: a demo.** It does not need parity with desktop. Do not add web fallbacks for terminal, git, or debugger. Keep it working for trying Kestrel in a browser, and stop there.
