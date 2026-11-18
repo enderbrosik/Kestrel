@@ -1,0 +1,27 @@
+{
+  "name": "kestrel",
+  "version": "0.1.0",
+  "description": "Kestrel: an open-source code editor built on Monaco and Tauri, meant to replace VS Code.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2",
+    "monaco-editor": "^0.57.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "typescript": "^5.9.0",
+    "vite": "^8.3.0",
+    "vitest": "^3.2.4"
+  }
+}
