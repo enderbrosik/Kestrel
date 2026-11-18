@@ -4,13 +4,14 @@
 import { h } from './core/dom';
 import { runCommand } from './core/commands';
 import { Explorer } from './workspace/explorer';
-import { bindStatusBar, notify } from './ui/status';
+import { EditorPane } from './editor/editor-pane';
+import { bindStatusBar } from './ui/status';
 
 export function mountApp(root: HTMLElement): void {
   const sidebarTitle = h('span', { class: 'sidebar-title' }, 'Explorer');
   const tree = h('div', { class: 'explorer' });
   const statusBar = h('footer', { class: 'statusbar', role: 'status' });
-  const editorArea = h('section', { class: 'editor-area' }, h('div', { class: 'placeholder' }, 'Open a file from the explorer.'));
+  const editorArea = h('section', { class: 'editor-area' });
 
   root.replaceChildren(
     h(
@@ -50,6 +51,21 @@ export function mountApp(root: HTMLElement): void {
     sidebarTitle.textContent = path.split(/[\\/]/).filter(Boolean).pop() ?? path;
     sidebarTitle.title = path;
   });
-  // Opening a file in the editor is wired up in step 2 (tabs and editing).
-  explorer.onFileOpen.on((path) => notify(`Open: ${path}`));
+  const editor = new EditorPane(editorArea);
+  explorer.onFileOpen.on((path) => void editor.openFile(path));
+  explorer.onFileOperation.on((op) => editor.handleFileOperation(op));
+
+  // Temporary hard-coded save shortcut. Step 4 replaces this with the
+  // user-editable keybindings file.
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      void runCommand('file.save');
+    }
+  });
+
+  // Warn before leaving the page with unsaved edits (web build).
+  window.addEventListener('beforeunload', (e) => {
+    if (editor.hasUnsavedChanges()) e.preventDefault();
+  });
 }
