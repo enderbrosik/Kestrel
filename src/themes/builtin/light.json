@@ -1,0 +1,52 @@
+{
+  "id": "kestrel-light",
+  "name": "Kestrel Light",
+  "type": "light",
+  "ui": {
+    "bg": "#ffffff",
+    "fg": "#1f2328",
+    "muted": "#6b7280",
+    "sidebar-bg": "#f6f7f9",
+    "titlebar-bg": "#eceef2",
+    "statusbar-bg": "#2563eb",
+    "statusbar-fg": "#ffffff",
+    "border": "#d0d7de",
+    "hover": "#e6eaf0",
+    "selection": "#dbe7ff",
+    "accent": "#2563eb",
+    "danger": "#cf222e",
+    "input-bg": "#ffffff"
+  },
+  "editor": {
+    "colors": {
+      "editor.background": "#ffffff",
+      "editor.foreground": "#1f2328",
+      "editor.lineHighlightBackground": "#f3f6fb",
+      "editor.selectionBackground": "#b6d0ff",
+      "editor.inactiveSelectionBackground": "#dbe7ff",
+      "editorCursor.foreground": "#2563eb",
+      "editorLineNumber.foreground": "#9aa3b2",
+      "editorLineNumber.activeForeground": "#1f2328",
+      "editorIndentGuide.background1": "#e6eaf0",
+      "editorWidget.background": "#f6f7f9",
+      "editorWidget.border": "#d0d7de",
+      "editorSuggestWidget.background": "#ffffff",
+      "editorSuggestWidget.selectedBackground": "#dbe7ff"
+    },
+    "tokens": [
+      { "token": "comment", "foreground": "#6a737d", "fontStyle": "italic" },
+      { "token": "keyword", "foreground": "#8250df" },
+      { "token": "string", "foreground": "#116329" },
+      { "token": "string.escape", "foreground": "#0550ae" },
+      { "token": "number", "foreground": "#0550ae" },
+      { "token": "type", "foreground": "#953800" },
+      { "token": "predefined", "foreground": "#0550ae" },
+      { "token": "tag", "foreground": "#116329" },
+      { "token": "attribute.name", "foreground": "#0550ae" },
+      { "token": "regexp", "foreground": "#116329" },
+      { "token": "delimiter", "foreground": "#57606a" },
+      { "token": "string.key.json", "foreground": "#0550ae" },
+      { "token": "string.value.json", "foreground": "#116329" }
+    ]
+  }
+}

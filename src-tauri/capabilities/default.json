@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Capabilities for the main Kestrel window",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "core:window:allow-set-theme", "dialog:allow-open"]
 }

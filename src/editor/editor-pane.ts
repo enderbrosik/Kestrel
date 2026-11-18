@@ -10,6 +10,8 @@ import { confirmDialog } from '../ui/dialog';
 import { notify, reportError } from '../ui/status';
 import type { FileOperation } from '../workspace/explorer';
 import type { CodeEditor, MonacoApi, TextModel, ViewState } from './monaco';
+import type { Theme } from '../themes/loader';
+import { toMonacoTheme } from '../themes/loader';
 import { renderTabs } from './tabs';
 
 interface OpenDoc {
@@ -42,6 +44,7 @@ export class EditorPane {
   private applyLanguage: ApplyLanguage | null = null;
   private editor: CodeEditor | null = null;
   private loading: Promise<void> | null = null;
+  private theme: Theme | null = null;
 
   private readonly tabBar = h('div', { class: 'tabs', role: 'tablist' });
   private readonly host = h('div', { class: 'editor-host' });
@@ -63,6 +66,18 @@ export class EditorPane {
 
   focus(): void {
     this.editor?.focus();
+  }
+
+  /** Set the editor colors. Applied right away if Monaco is loaded, otherwise when it loads. */
+  setTheme(theme: Theme): void {
+    this.theme = theme;
+    this.applyMonacoTheme();
+  }
+
+  private applyMonacoTheme(): void {
+    if (!this.monaco || !this.theme) return;
+    this.monaco.editor.defineTheme(this.theme.id, toMonacoTheme(this.theme));
+    this.monaco.editor.setTheme(this.theme.id);
   }
 
   hasUnsavedChanges(): boolean {
@@ -198,8 +213,8 @@ export class EditorPane {
         fontSize: 14,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
-        theme: 'vs',
       });
+      this.applyMonacoTheme();
     });
     return this.loading;
   }

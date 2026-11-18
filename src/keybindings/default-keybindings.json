@@ -10,6 +10,7 @@
   { "keys": "Mod+Alt+Shift+N", "run": "explorer.newFolder" },
   { "keys": "Mod+Alt+R", "run": "explorer.refresh" },
   { "keys": "Mod+Alt+K", "run": "keybindings.openFile" },
+  { "keys": "Mod+Alt+T", "run": "theme.cycleMode" },
 
   { "keys": "Down", "run": "explorer.selectNext", "when": "explorer" },
   { "keys": "Up", "run": "explorer.selectPrevious", "when": "explorer" },

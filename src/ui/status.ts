@@ -3,10 +3,17 @@
 type Level = 'info' | 'error';
 
 let statusEl: HTMLElement | null = null;
+let barEl: HTMLElement | null = null;
 let timer: number | undefined;
 
-export function bindStatusBar(el: HTMLElement): void {
-  statusEl = el;
+/** `message` shows the text; `bar` (default: the same element) carries the error styling. */
+export function bindStatusBar(message: HTMLElement, bar: HTMLElement = message): void {
+  statusEl = message;
+  barEl = bar;
+}
+
+function setLevel(level: Level): void {
+  if (barEl) barEl.dataset.level = level;
 }
 
 export function notify(message: string, level: Level = 'info', timeoutMs = 4000): void {
@@ -15,13 +22,13 @@ export function notify(message: string, level: Level = 'info', timeoutMs = 4000)
     return;
   }
   statusEl.textContent = message;
-  statusEl.dataset.level = level;
+  setLevel(level);
   window.clearTimeout(timer);
   if (timeoutMs > 0) {
     timer = window.setTimeout(() => {
       if (statusEl) {
         statusEl.textContent = '';
-        statusEl.dataset.level = 'info';
+        setLevel('info');
       }
     }, timeoutMs);
   }

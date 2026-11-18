@@ -254,8 +254,18 @@ button.primary:hover { filter: brightness(1.08); }
   color: var(--statusbar-fg);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
+.status-message { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.status-item {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 0;
+  color: inherit;
+  font-size: 12px;
+}
+.status-item:hover { background: rgba(255, 255, 255, 0.15); }
 .statusbar[data-level='error'] { background: var(--danger); }
 
 .modal-overlay {
