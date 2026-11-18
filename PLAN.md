@@ -36,11 +36,11 @@ Roughly in this order, because each unlocks the next:
 4. Language servers (LSP) for completion, diagnostics, go to definition, rename. Monaco has no LSP built in.
 5. Integrated terminal (desktop only).
 6. Git: status in the explorer, a changes panel, diff view, commit.
-7. Plugin system v1 (commands, keybindings, themes, languages, settings), with the design decided first.
+7. ~~Plugin system v1~~ Deferred: Aaron said "not yet" on the compatibility question (see Decisions from Aaron). Do not start it until that is decided.
 
 ### Phase 3 and later (proposed)
 
-Debugger (via the Debug Adapter Protocol), AI features, split editors, multi-root workspaces, per-folder and per-language settings, settings sync, code signing and auto-update, accessibility and localization passes.
+macOS signing, notarization, and auto-update (Aaron has a Developer ID), debugger (via the Debug Adapter Protocol), AI features, split editors, multi-root workspaces, per-folder and per-language settings, settings sync, accessibility and localization passes.
 
 ## Decisions made
 
@@ -112,17 +112,22 @@ Things worth checking on first run on macOS: the folder picker and Save As dialo
 - No window-close guard for unsaved changes on desktop (the web build has a `beforeunload` warning).
 - Accessibility has had basic attention (roles, labels, focus handling) but no audit.
 
+## Decisions from Aaron
+
+Answers to the first round of questions:
+
+1. **License: undecided, "maybe closed source".** This conflicts with the original brief ("open source from day one"), and the repository currently contains an MIT `LICENSE`. Nothing has been published, so it can be changed freely. Until Aaron decides, treat the license as unsettled. Two facts matter: code published under MIT stays MIT for everyone who received it, and a repository with no license file is all rights reserved by default. Name, bundle identifier (`dev.kestrel.editor`), and contribution rules (DCO or CLA) are still open, and a CLA matters more if the project might go closed or dual-licensed.
+2. **Repository: local only for now.** No remote, nothing pushed.
+3. **Plugin compatibility: not decided yet.** The plugin system is deferred; the stubs in `src/future/plugins.ts` stay as they are.
+4. **Web build: a demo.** It does not need parity with desktop. Do not add web fallbacks for terminal, git, or debugger. Keep it working for trying Kestrel in a browser, and stop there.
+5. **Apple Developer ID: yes.** Signing and notarization can be set up. When that work starts it needs the Team ID, a "Developer ID Application" certificate (kept in the keychain or CI secrets, never in the repo), and an app-specific password or API key for notarization. Add it to Phase 3 as "macOS signing, notarization, and auto-update".
+
 ## Open questions for Aaron
 
-1. **Name, identifier, and license.** "Kestrel" and `dev.kestrel.editor` are placeholders, and the identifier is hard to change after people install it. License is MIT; Apache-2.0 would add a patent grant. Which do you want?
-2. **Where does the repository live?** There is no remote yet and nothing is pushed. Also: contribution rules (DCO or CLA), code of conduct, and an issue template, all of which matter for "open source from day one".
-3. **How compatible with VS Code extensions should the plugin system be?** Supporting the VS Code extension API gives an instant ecosystem but is a huge and legally careful job (the Marketplace terms restrict other products; Open VSX is the open alternative). A smaller native plugin API is much simpler but starts with no ecosystem. This decides Phase 2's shape.
-4. **Language intelligence.** Run language servers as processes from the desktop app and bridge them to Monaco? Or build on a ready-made client library? And is the web build expected to have them?
-5. **Is the web build a product or a demo?** It cannot have a terminal, git, or debugger without a backend, and it only works in Chromium browsers. If it is a demo, I will stop spending effort on parity.
-6. **Should Monaco's editing shortcuts be remappable now, and should the defaults differ from VS Code's?** Your brief says not to copy VS Code's bindings; today only the app-level ones are custom.
-7. **Startup behavior.** Reopen the last folder automatically? Restore open tabs? Auto-save on focus loss? I chose none of these.
-8. **macOS distribution.** Code signing and notarization need an Apple Developer ID ($99 a year). Do you have one? Also: Apple Silicon only, or a universal binary for Intel Macs? I set the minimum macOS to 11.
-9. **Telemetry and updates.** Proposal: no telemetry at all, and an opt-in update check later. Agree?
-10. **Settings model.** Per-folder `.kestrel/settings.json` and per-language overrides are the usual next step. Do you want them in Phase 2?
-11. **Multi-window and multi-root workspaces.** One folder per window, or several?
-12. **Adding a Playwright suite** for browser end-to-end tests (one more dev dependency): yes or no?
+1. **Should Monaco's editing shortcuts be remappable now, and should the defaults differ from VS Code's?** Your brief says not to copy VS Code's bindings; today only the app-level ones are custom.
+2. **Startup behavior.** Reopen the last folder automatically? Restore open tabs? Auto-save on focus loss? I chose none of these.
+3. **macOS builds.** You have an Apple Developer ID, so signing is possible. Apple Silicon only, or a universal binary that also runs on Intel Macs? I set the minimum macOS to 11.
+4. **Telemetry and updates.** Proposal: no telemetry at all, and an opt-in update check later. Agree?
+5. **Settings model.** Per-folder `.kestrel/settings.json` and per-language overrides are the usual next step. Do you want them in Phase 2?
+6. **Multi-window and multi-root workspaces.** One folder per window, or several?
+7. **Adding a Playwright suite** for browser end-to-end tests (one more dev dependency): yes or no?
