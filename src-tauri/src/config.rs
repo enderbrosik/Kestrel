@@ -1,8 +1,8 @@
 // User configuration files (settings.json, keybindings.json, themes/*.json,
 // recent.json) live in the OS app config directory. For example:
-//   macOS:   ~/Library/Application Support/dev.kestrel.editor/
-//   Linux:   ~/.config/dev.kestrel.editor/
-//   Windows: %APPDATA%\dev.kestrel.editor\
+//   macOS:   ~/Library/Application Support/app.pocketlantern.kesterel/
+//   Linux:   ~/.config/app.pocketlantern.kesterel/
+//   Windows: %APPDATA%\app.pocketlantern.kesterel\
 
 use std::fs;
 use std::io::ErrorKind;

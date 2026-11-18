@@ -35,6 +35,6 @@ Flat keys, comments allowed:
 | `editor.lineNumbers` | `on` | `on`, `off`, `relative` |
 | `editor.minimap` | `false` | |
 
-Location: the OS config folder on desktop (macOS: `~/Library/Application Support/dev.kestrel.editor/settings.json`), localStorage on the web build.
+Location: the OS config folder on desktop (macOS: `~/Library/Application Support/app.pocketlantern.kesterel/settings.json`), localStorage on the web build.
 
 Not yet here: per-folder settings, per-language overrides, and a search box in the screen.
