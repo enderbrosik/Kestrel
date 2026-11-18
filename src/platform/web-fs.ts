@@ -216,7 +216,9 @@ export const webFileSystem: FileSystemBackend = {
     const { rest } = splitPath(path);
     if (rest.length === 0) throw new Error('Cannot rename an opened folder here');
     const parent = await dirAt(parentPath(path));
-    if (n !== rest[rest.length - 1] && (await exists(parent, n))) throw new Error(`${n} already exists`);
+    const old = rest[rest.length - 1]!;
+    // A change of letter case only ("a.txt" to "A.txt") is allowed on case-insensitive file systems.
+    if (n.toLowerCase() !== old.toLowerCase() && (await exists(parent, n))) throw new Error(`${n} already exists`);
     await (await entryAt(path) as MovableHandle).move(n);
     return `${parentPath(path)}/${n}`;
   },

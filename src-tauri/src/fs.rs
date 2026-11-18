@@ -23,6 +23,22 @@ fn path_string(p: &Path) -> String {
     p.to_string_lossy().into_owned()
 }
 
+/// True if both paths are the same file on disk. Lets "a.txt" be renamed to "A.txt" on
+/// case-insensitive file systems (the macOS default), where the new name "already exists".
+#[cfg(unix)]
+fn same_file(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (fs::symlink_metadata(a), fs::symlink_metadata(b)) {
+        (Ok(x), Ok(y)) => x.dev() == y.dev() && x.ino() == y.ino(),
+        _ => false,
+    }
+}
+
+#[cfg(not(unix))]
+fn same_file(a: &Path, b: &Path) -> bool {
+    a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+}
+
 fn child_path(dir: &str, name: &str) -> Result<PathBuf, String> {
     let name = name.trim();
     if name.is_empty() {
@@ -97,7 +113,7 @@ pub fn fs_rename(path: String, new_name: String) -> Result<String, String> {
     let from = PathBuf::from(&path);
     let parent = from.parent().ok_or("Cannot rename a filesystem root")?;
     let to = child_path(&path_string(parent), &new_name)?;
-    if to.exists() && to != from {
+    if to.exists() && !same_file(&from, &to) {
         return Err(format!("{new_name} already exists"));
     }
     fs::rename(&from, &to).map_err(to_str_err)?;
@@ -134,5 +150,112 @@ pub fn fs_remove(path: String) -> Result<(), String> {
         fs::remove_dir_all(p).map_err(to_str_err)
     } else {
         fs::remove_file(p).map_err(to_str_err)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
+
+    /// A fresh empty folder under the system temp dir, removed on drop.
+    struct Sandbox(PathBuf);
+
+    impl Sandbox {
+        fn new() -> Self {
+            let n = COUNTER.fetch_add(1, Ordering::SeqCst);
+            let dir = std::env::temp_dir().join(format!("kestrel-fs-test-{}-{n}", std::process::id()));
+            fs::create_dir_all(&dir).unwrap();
+            Sandbox(dir)
+        }
+        fn path(&self) -> String {
+            path_string(&self.0)
+        }
+    }
+
+    impl Drop for Sandbox {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn lists_folders_first_then_files_case_insensitively() {
+        let sb = Sandbox::new();
+        fs_create_file(sb.path(), "b.txt".into()).unwrap();
+        fs_create_file(sb.path(), "A.txt".into()).unwrap();
+        fs_create_dir(sb.path(), "zeta".into()).unwrap();
+        let names: Vec<String> = fs_list_dir(sb.path()).unwrap().into_iter().map(|e| e.name).collect();
+        assert_eq!(names, ["zeta", "A.txt", "b.txt"]);
+    }
+
+    #[test]
+    fn create_refuses_existing_names_and_bad_names() {
+        let sb = Sandbox::new();
+        fs_create_file(sb.path(), "a.txt".into()).unwrap();
+        assert!(fs_create_file(sb.path(), "a.txt".into()).unwrap_err().contains("already exists"));
+        assert!(fs_create_dir(sb.path(), "a.txt".into()).is_err());
+        for bad in ["", "  ", "..", ".", "x/y", "x\\y"] {
+            assert!(fs_create_file(sb.path(), bad.into()).is_err(), "should reject {bad:?}");
+        }
+    }
+
+    #[test]
+    fn write_then_read_round_trips_and_rejects_non_utf8() {
+        let sb = Sandbox::new();
+        let file = fs_create_file(sb.path(), "t.txt".into()).unwrap();
+        fs_write_file(file.clone(), "héllo\n".into()).unwrap();
+        assert_eq!(fs_read_file(file).unwrap(), "héllo\n");
+        let bin = Path::new(&sb.path()).join("b.bin");
+        fs::write(&bin, [0xff, 0xfe, 0x00]).unwrap();
+        assert!(fs_read_file(path_string(&bin)).unwrap_err().contains("not a UTF-8"));
+    }
+
+    #[test]
+    fn rename_works_and_refuses_to_overwrite() {
+        let sb = Sandbox::new();
+        let a = fs_create_file(sb.path(), "a.txt".into()).unwrap();
+        fs_create_file(sb.path(), "b.txt".into()).unwrap();
+        assert!(fs_rename(a.clone(), "b.txt".into()).unwrap_err().contains("already exists"));
+        let renamed = fs_rename(a.clone(), "c.txt".into()).unwrap();
+        assert!(renamed.ends_with("c.txt"));
+        assert!(!Path::new(&a).exists());
+        // Renaming to its own name is not an error.
+        assert_eq!(fs_rename(renamed.clone(), "c.txt".into()).unwrap(), renamed);
+    }
+
+    #[test]
+    fn move_into_folder_and_guards() {
+        let sb = Sandbox::new();
+        let file = fs_create_file(sb.path(), "a.txt".into()).unwrap();
+        let sub = fs_create_dir(sb.path(), "sub".into()).unwrap();
+        let moved = fs_move(file.clone(), sub.clone()).unwrap();
+        assert!(Path::new(&moved).is_file());
+        assert!(!Path::new(&file).exists());
+
+        // A name clash at the destination is refused.
+        let again = fs_create_file(sb.path(), "a.txt".into()).unwrap();
+        assert!(fs_move(again, sub.clone()).unwrap_err().contains("already exists"));
+
+        // A folder cannot go into itself or its own child.
+        let inner = fs_create_dir(sub.clone(), "inner".into()).unwrap();
+        assert!(fs_move(sub.clone(), sub.clone()).unwrap_err().contains("into itself"));
+        assert!(fs_move(sub.clone(), inner).unwrap_err().contains("into itself"));
+        // The destination must be a folder.
+        assert!(fs_move(moved.clone(), moved).is_err());
+    }
+
+    #[test]
+    fn remove_deletes_files_and_whole_folders() {
+        let sb = Sandbox::new();
+        let sub = fs_create_dir(sb.path(), "sub".into()).unwrap();
+        fs_create_file(sub.clone(), "x.txt".into()).unwrap();
+        let file = fs_create_file(sb.path(), "f.txt".into()).unwrap();
+        fs_remove(file.clone()).unwrap();
+        fs_remove(sub.clone()).unwrap();
+        assert!(!Path::new(&file).exists() && !Path::new(&sub).exists());
+        assert!(fs_remove(file).is_err());
     }
 }
