@@ -2,7 +2,7 @@
 
 Kestrel is an open-source code editor meant to replace VS Code for everyday work. It is built on Monaco (the editor component from VS Code) in TypeScript with Vite, and ships as a Tauri 2 desktop app and as a web app from the same code.
 
-"Kestrel" is a placeholder name. The bundle identifier `app.pocketlantern.kestrel` was set by Aaron (`app.pocketlantern.kestrel`).
+"Kestrel" is a placeholder name. The bundle identifier is `app.pocketlantern.kestrel`, set by Aaron.
 
 ## Phases
 
