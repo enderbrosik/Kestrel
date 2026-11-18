@@ -2,12 +2,14 @@
 // then connects the features to each other.
 
 import { h } from './core/dom';
-import { runCommand } from './core/commands';
+import { registerCommand, runCommand } from './core/commands';
 import { Explorer } from './workspace/explorer';
 import { EditorPane } from './editor/editor-pane';
 import { getConfigStore } from './config/store';
 import { initKeybindings } from './keybindings';
 import { initSettings, type Settings } from './settings';
+import { RecentFolders } from './startup/recent-folders';
+import { StartScreen } from './startup/screen';
 import { initThemes, type ThemeManager } from './themes';
 import type { ThemeMode } from './themes/loader';
 import { bindStatusBar, reportError } from './ui/status';
@@ -24,7 +26,7 @@ export function mountApp(root: HTMLElement, themes: ThemeManager): void {
     h(
       'header',
       { class: 'titlebar' },
-      h('span', { class: 'brand' }, 'Kestrel'),
+      h('button', { class: 'brand', title: 'Start screen', onclick: () => runCommand('app.showStartScreen') }, 'Kestrel'),
       h(
         'div',
         { class: 'titlebar-actions' },
@@ -75,6 +77,26 @@ export function mountApp(root: HTMLElement, themes: ThemeManager): void {
   };
   themes.onDidChange.on(showTheme);
   showTheme();
+
+  // Startup screen: shown first; the recent list fills in once the config folder has been read.
+  const recents = new RecentFolders();
+  const start = new StartScreen({
+    recents,
+    openFolder: () => explorer.openFolder(),
+    openRecent: (path) => explorer.openPath(path),
+    blankSlate: () => {
+      start.hide();
+      void editor.newUntitled();
+    },
+    canDismiss: () => explorer.rootPath !== null || editor.hasOpenDocuments,
+  });
+  root.append(start.element);
+  registerCommand('app.showStartScreen', () => start.show());
+  explorer.onRootChange.on((path) => {
+    start.hide();
+    void recents.add(path);
+  });
+  void getConfigStore().then((store) => recents.load(store));
 
   void startConfig(editor, themes, root);
 

@@ -17,6 +17,16 @@ export interface FileSystemBackend {
   readonly kind: 'desktop' | 'web';
   /** Show a folder picker. Resolves to the new root path, or null if cancelled. */
   pickFolder(): Promise<string | null>;
+  /**
+   * Open a folder opened before (from the recent list). Resolves to its root path,
+   * which may differ from `path` on the web. Throws if it can no longer be opened.
+   * Call from a click handler: the web build may need to ask for permission.
+   */
+  reopenFolder(path: string): Promise<string>;
+  /** Show a "save as" dialog and write the content. Resolves to the new file's path, or null if cancelled. */
+  saveAs(suggestedName: string, content: string): Promise<string | null>;
+  /** Forget a remembered folder (web only needs this; desktop does nothing). */
+  forgetFolder(path: string): Promise<void>;
   listDir(path: string): Promise<FileEntry[]>;
   readFile(path: string): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;

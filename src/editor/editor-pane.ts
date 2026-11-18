@@ -19,7 +19,10 @@ import { renderTabs } from './tabs';
 
 interface OpenDoc {
   id: number;
-  path: string;
+  /** null for an untitled buffer that has not been saved yet. */
+  path: string | null;
+  /** Shown in the tab while there is no path, e.g. "Untitled-1". */
+  untitledName?: string;
   model: TextModel;
   /** Model version at the last save or load. Equal to the current version means "clean". */
   savedVersion: number;
@@ -33,7 +36,7 @@ function isUnder(path: string, base: string): boolean {
 }
 
 export class EditorPane {
-  /** Fires with the active file path, or null when no file is open. */
+  /** Fires with the active file path, or null when no file (or only an untitled buffer) is open. */
   readonly onActiveFileChange = new Emitter<string | null>();
   /** Fires with the file path after each successful save. */
   readonly onDidSave = new Emitter<string>();
@@ -43,6 +46,7 @@ export class EditorPane {
   private docs: OpenDoc[] = [];
   private active: OpenDoc | null = null;
   private nextId = 1;
+  private untitledCount = 0;
   private monaco: MonacoApi | null = null;
   private applyLanguage: ApplyLanguage | null = null;
   private editor: CodeEditor | null = null;
@@ -58,6 +62,7 @@ export class EditorPane {
     container.replaceChildren(this.tabBar, this.host, this.placeholder);
     this.updateChrome();
     registerCommand('file.save', () => this.save());
+    registerCommand('file.newUntitled', () => this.newUntitled());
     registerCommand('tab.close', () => (this.active ? this.close(this.active) : undefined));
     registerCommand('tab.next', () => this.cycle(1));
     registerCommand('tab.previous', () => this.cycle(-1));
@@ -101,6 +106,14 @@ export class EditorPane {
     return this.docs.some((d) => this.isDirty(d));
   }
 
+  get hasOpenDocuments(): boolean {
+    return this.docs.length > 0;
+  }
+
+  private titleOf(doc: OpenDoc): string {
+    return doc.path === null ? (doc.untitledName ?? 'Untitled') : baseName(doc.path);
+  }
+
   // ---- opening and activating --------------------------------------------
 
   async openFile(path: string): Promise<void> {
@@ -134,6 +147,23 @@ export class EditorPane {
     this.activate(doc);
   }
 
+  /** Open a new empty buffer. It gets a file name when it is first saved. */
+  async newUntitled(): Promise<void> {
+    await this.ensureEditor();
+    const monaco = this.monaco!;
+    const id = this.nextId++;
+    const untitledName = `Untitled-${++this.untitledCount}`;
+    const model = monaco.editor.createModel('', 'plaintext', monaco.Uri.from({ scheme: 'kestrel', path: `/${id}/${untitledName}` }));
+    const doc: OpenDoc = { id, path: null, untitledName, model, savedVersion: model.getAlternativeVersionId(), viewState: null };
+    model.onDidChangeContent(() => {
+      this.renderTabBar();
+      this.onDirtyChange.fire();
+    });
+    this.applyIndent(doc);
+    this.docs.push(doc);
+    this.activate(doc);
+  }
+
   private activate(doc: OpenDoc): void {
     if (this.active && this.active !== doc) this.active.viewState = this.editor?.saveViewState() ?? null;
     this.active = doc;
@@ -155,27 +185,38 @@ export class EditorPane {
   async save(): Promise<void> {
     const doc = this.active;
     if (!doc) return;
-    if (!this.isDirty(doc)) return notify(`${baseName(doc.path)} has no changes`);
+    if (!this.isDirty(doc)) return notify(`${this.titleOf(doc)} has no changes`);
     // Capture before the write so edits made while saving keep the tab dirty.
     const version = doc.model.getAlternativeVersionId();
     const text = doc.model.getValue();
     try {
-      await (await getFileSystem()).writeFile(doc.path, text);
+      const fs = await getFileSystem();
+      if (doc.path === null) {
+        // First save of an untitled buffer: ask where it goes, then it becomes a normal file.
+        const chosen = await fs.saveAs(doc.untitledName ?? 'Untitled', text);
+        if (chosen === null) return;
+        doc.path = chosen;
+        if (this.monaco) this.applyLanguage?.(this.monaco, doc.model, chosen);
+        this.applyIndent(doc);
+      } else {
+        await fs.writeFile(doc.path, text);
+      }
     } catch (err) {
-      return reportError(`Cannot save ${baseName(doc.path)}`, err);
+      return reportError(`Cannot save ${this.titleOf(doc)}`, err);
     }
     doc.savedVersion = version;
     // Start a new undo step so undoing after a save stops at the saved text.
     doc.model.pushStackElement();
     this.renderTabBar();
     this.onDirtyChange.fire();
-    notify(`Saved ${baseName(doc.path)}`);
-    this.onDidSave.fire(doc.path);
+    notify(`Saved ${this.titleOf(doc)}`);
+    this.onDidSave.fire(doc.path!);
+    if (doc === this.active) this.onActiveFileChange.fire(doc.path);
   }
 
   private async close(doc: OpenDoc, force = false): Promise<void> {
     if (!force && this.isDirty(doc)) {
-      const discard = await confirmDialog(`"${baseName(doc.path)}" has unsaved changes. Discard them?`, 'Discard');
+      const discard = await confirmDialog(`"${this.titleOf(doc)}" has unsaved changes. Discard them?`, 'Discard');
       if (!discard) return;
     }
     const index = this.docs.indexOf(doc);
@@ -202,7 +243,7 @@ export class EditorPane {
   handleFileOperation(op: FileOperation): void {
     if (op.type === 'rename' || op.type === 'move') {
       for (const doc of this.docs) {
-        if (!isUnder(doc.path, op.from)) continue;
+        if (doc.path === null || !isUnder(doc.path, op.from)) continue;
         doc.path = op.to + doc.path.slice(op.from.length);
         // The extension may have changed, so re-detect the language.
         if (this.monaco) this.applyLanguage?.(this.monaco, doc.model, doc.path);
@@ -212,13 +253,15 @@ export class EditorPane {
       if (this.active) this.onActiveFileChange.fire(this.active.path);
     } else if (op.type === 'delete') {
       // The file is gone from disk, so close without asking.
-      for (const doc of this.docs.filter((d) => isUnder(d.path, op.path))) void this.close(doc, true);
+      for (const doc of this.docs.filter((d) => d.path !== null && isUnder(d.path, op.path))) void this.close(doc, true);
     }
   }
 
   // ---- internals ----------------------------------------------------------
 
   private isDirty(doc: OpenDoc): boolean {
+    // An untitled buffer counts as unsaved as soon as it has any text.
+    if (doc.path === null) return doc.model.getValueLength() > 0;
     return doc.model.getAlternativeVersionId() !== doc.savedVersion;
   }
 
@@ -251,8 +294,8 @@ export class EditorPane {
       this.tabBar,
       this.docs.map((d) => ({
         id: d.id,
-        title: baseName(d.path),
-        tooltip: d.path,
+        title: this.titleOf(d),
+        tooltip: d.path ?? 'Not saved yet',
         dirty: this.isDirty(d),
         active: d === this.active,
       })),

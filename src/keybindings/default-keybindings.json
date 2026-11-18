@@ -2,6 +2,8 @@
   { "keys": "Mod+S", "run": "file.save" },
   { "keys": "Mod+Shift+O", "run": "workspace.openFolder" },
   { "keys": "Mod+Alt+W", "run": "tab.close" },
+  { "keys": "Mod+Alt+U", "run": "file.newUntitled" },
+  { "keys": "Mod+Alt+H", "run": "app.showStartScreen" },
   { "keys": "Mod+Alt+Right", "run": "tab.next" },
   { "keys": "Mod+Alt+Left", "run": "tab.previous" },
   { "keys": "Mod+1", "run": "view.focusExplorer" },

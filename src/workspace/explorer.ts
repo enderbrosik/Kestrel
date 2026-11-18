@@ -66,6 +66,12 @@ export class Explorer {
     if (path) await this.setRoot(path);
   }
 
+  /** Open a folder by path, such as one from the recent list. Throws if it cannot be opened. */
+  async openPath(path: string): Promise<void> {
+    const fs = await this.backend();
+    await this.setRoot(await fs.reopenFolder(path));
+  }
+
   async setRoot(path: string): Promise<void> {
     const previous = this.root;
     this.root = { path, name: baseName(path), isDir: true, expanded: true, children: null };

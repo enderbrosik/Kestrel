@@ -1,9 +1,11 @@
 // Web file system backend built on the File System Access API (Chromium-based
 // browsers). Paths are "<root folder name>/<relative path>". Opened folders are
-// kept in memory for the session; they are not restored after a reload.
+// remembered in IndexedDB (web-handles.ts) so the recent list can reopen them,
+// after the user grants permission again.
 
 import type { FileEntry, FileSystemBackend } from './fs';
 import { isWebConfigPath, readWebConfig, webConfigName, writeWebConfig } from './web-config';
+import { deleteFolderHandle, loadFolderHandle, saveFolderHandle } from './web-handles';
 
 type AnyDirHandle = FileSystemDirectoryHandle;
 type AnyFileHandle = FileSystemFileHandle;
@@ -14,11 +16,34 @@ type MovableHandle = (AnyDirHandle | AnyFileHandle) & {
 type IterableDirHandle = AnyDirHandle & {
   values(): AsyncIterableIterator<AnyDirHandle | AnyFileHandle>;
 };
-type PickerWindow =Window & {
+type PickerWindow = Window & {
   showDirectoryPicker?: (options?: { mode?: 'read' | 'readwrite' }) => Promise<AnyDirHandle>;
+  showSaveFilePicker?: (options?: { suggestedName?: string }) => Promise<AnyFileHandle>;
+};
+type PermissionHandle = AnyDirHandle & {
+  queryPermission(descriptor: { mode: 'readwrite' }): Promise<PermissionState>;
+  requestPermission(descriptor: { mode: 'readwrite' }): Promise<PermissionState>;
+  isSameEntry(other: AnyDirHandle): Promise<boolean>;
 };
 
 const roots = new Map<string, AnyDirHandle>();
+
+/** Files created through "save as": the browser gives us the file handle itself, not a folder path. */
+const SAVED_FILE_ROOT = 'kestrel-file';
+const savedFiles = new Map<string, AnyFileHandle>();
+let savedFileCounter = 0;
+
+/** Register an opened folder under a unique name. The same folder opened again keeps its name. */
+async function registerRoot(handle: AnyDirHandle, preferred: string): Promise<string> {
+  for (let n = 1; ; n++) {
+    const key = n === 1 ? preferred : `${preferred} (${n})`;
+    const existing = roots.get(key) as PermissionHandle | undefined;
+    if (!existing || (await existing.isSameEntry(handle))) {
+      roots.set(key, handle);
+      return key;
+    }
+  }
+}
 
 function splitPath(path: string): { root: string; rest: string[] } {
   const [root, ...rest] = path.split('/').filter(Boolean);
@@ -94,12 +119,42 @@ export const webFileSystem: FileSystemBackend = {
       if (err instanceof DOMException && err.name === 'AbortError') return null;
       throw err;
     }
-    let key = handle.name;
-    for (let n = 2; roots.has(key) && roots.get(key) !== handle; n++) {
-      key = `${handle.name} (${n})`;
-    }
-    roots.set(key, handle);
+    const key = await registerRoot(handle, handle.name);
+    await saveFolderHandle(key, handle);
     return key;
+  },
+
+  async reopenFolder(path) {
+    const handle = (roots.get(path) ?? (await loadFolderHandle(path))) as PermissionHandle | null;
+    if (!handle) throw new Error(`"${path}" cannot be reopened from the browser. Use Open Folder.`);
+    if ((await handle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+      if ((await handle.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('Permission to open the folder was denied');
+    }
+    const key = await registerRoot(handle, path);
+    await saveFolderHandle(key, handle);
+    return key;
+  },
+
+  async saveAs(suggestedName, content) {
+    const picker = (window as PickerWindow).showSaveFilePicker;
+    if (!picker) throw new Error('This browser cannot save new files. Open a folder and create the file there.');
+    let handle: AnyFileHandle;
+    try {
+      handle = await picker({ suggestedName });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return null;
+      throw err;
+    }
+    const writable = await handle.createWritable();
+    await writable.write(content);
+    await writable.close();
+    const path = `${SAVED_FILE_ROOT}/${++savedFileCounter}/${handle.name}`;
+    savedFiles.set(path, handle);
+    return path;
+  },
+
+  async forgetFolder(path) {
+    await deleteFolderHandle(path);
   },
 
   async listDir(path) {
@@ -122,8 +177,7 @@ export const webFileSystem: FileSystemBackend = {
     if (isWebConfigPath(path)) return readWebConfig(webConfigName(path)) ?? '';
     const { rest } = splitPath(path);
     if (rest.length === 0) throw new Error('Not a file');
-    const parent = await dirAt(parentPath(path));
-    const file = await parent.getFileHandle(rest[rest.length - 1]!);
+    const file = savedFiles.get(path) ?? (await (await dirAt(parentPath(path))).getFileHandle(rest[rest.length - 1]!));
     const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer());
     try {
       return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -135,8 +189,7 @@ export const webFileSystem: FileSystemBackend = {
   async writeFile(path, content) {
     if (isWebConfigPath(path)) return writeWebConfig(webConfigName(path), content);
     const { rest } = splitPath(path);
-    const parent = await dirAt(parentPath(path));
-    const file = await parent.getFileHandle(rest[rest.length - 1]!, { create: true });
+    const file = savedFiles.get(path) ?? (await (await dirAt(parentPath(path))).getFileHandle(rest[rest.length - 1]!, { create: true }));
     const writable = await file.createWritable();
     await writable.write(content);
     await writable.close();

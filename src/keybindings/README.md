@@ -32,6 +32,8 @@ Keyboard shortcuts, defined in JSON and editable by the user. Kestrel's default 
 | Mod+S | `file.save` |
 | Mod+Shift+O | `workspace.openFolder` |
 | Mod+Alt+W | `tab.close` |
+| Mod+Alt+U | `file.newUntitled` (new empty buffer) |
+| Mod+Alt+H | `app.showStartScreen` |
 | Mod+Alt+Right / Left | `tab.next` / `tab.previous` |
 | Mod+1 / Mod+2 | `view.focusExplorer` / `view.focusEditor` |
 | Mod+Alt+N / Mod+Alt+Shift+N | `explorer.newFile` / `explorer.newFolder` |
